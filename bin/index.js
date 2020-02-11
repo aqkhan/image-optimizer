@@ -12,25 +12,35 @@ var files = [];
 // Get all arguments in cli
 const yargs = require("yargs");
 const options = yargs
-  .usage("Usage: -n <name>")
+  .usage("Usage: -a")
   .option("a", {
     alias: "all",
     describe: "Show all files",
     demandOption: false
   })
+  .usage("Usage: -l < limit >")
   .option("l", {
     alias: "limit",
     describe: "Limit Files to show",
     type: "number",
     demandOption: false
   })
+  .usage("Usage: -o < asc | desc>")
   .option("o", {
     alias: "order",
     describe: "Set order of result asc | desc",
     type: "string",
     demandOption: false
+  })
+  .usage("Usage: -c <  high | moderate | low >")
+  .option("c", {
+    alias: "compress",
+    describe: "Set compression level of image high | moderate | low",
+    type: "string",
+    demandOption: false
   }).argv;
 
+options.compress = options.compress ? options.compress : "moderate";
 // Setting default order of the array to display
 options.order = options.order ? options.order : "asc";
 // If limit is not a number
@@ -67,13 +77,19 @@ async function performFunctions() {
     files = getAllFiles(filePath, files);
     console.log("Total Files: ", files.length);
 
+    // Compression Level of image
+    const compressionLevel =
+      options.compress === "moderate"
+        ? 40
+        : options.compress === "high"
+        ? 15
+        : 70
     // Compressing Images
     const Jimp = require("jimp");
-    // await Promise.all(
     files.forEach(async imgPath => {
       // console.log(imgPath)
       const image = await Jimp.read(imgPath);
-      await image.quality(10);
+      await image.quality(compressionLevel);
       await image.writeAsync("build/" + imgPath);
     });
 
