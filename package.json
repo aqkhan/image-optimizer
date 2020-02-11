@@ -1,0 +1,19 @@
+{
+  "name": "image-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "image": "./bin/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^3.0.0",
+    "jimp": "^0.9.3",
+    "yargs": "^15.1.0"
+  }
+}
