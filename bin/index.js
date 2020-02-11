@@ -7,6 +7,7 @@ var path = require("path");
 var filePath = ".";
 
 var fileInfoArray = [];
+var compressedFiles = [];
 var files = [];
 
 // Get all arguments in cli
@@ -51,12 +52,13 @@ const getAllFiles = function(dirPath, arrayOfFiles) {
   files = fs.readdirSync(dirPath);
 
   arrayOfFiles = arrayOfFiles || [];
-
+  // Loop  through files in directory
   files.forEach(function(file) {
     if (fs.statSync(dirPath + "/" + file).isDirectory()) {
       arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
     } else {
       var fileExt = path.extname(`${dirPath}/${file}`.toString());
+      // Adding only image files
       if (
         fileExt === ".png" ||
         fileExt === ".jpeg" ||
@@ -71,28 +73,16 @@ const getAllFiles = function(dirPath, arrayOfFiles) {
   return arrayOfFiles;
 };
 
+// Performing functions
 async function performFunctions() {
   try {
     // Getting All files from directories
     files = getAllFiles(filePath, files);
     console.log("Total Files: ", files.length);
-
-    // Compression Level of image
-    const compressionLevel =
-      options.compress === "moderate"
-        ? 40
-        : options.compress === "high"
-        ? 15
-        : 70
-    // Compressing Images
-    const Jimp = require("jimp");
-    files.forEach(async imgPath => {
-      // console.log(imgPath)
-      const image = await Jimp.read(imgPath);
-      await image.quality(compressionLevel);
-      await image.writeAsync("build/" + imgPath);
-    });
-
+    if (files.length === 0) {
+      console.log("No Image File found!");
+      return;
+    }
     // Setting Limit of images to show
     let showFiles = 25;
     options.all
@@ -101,19 +91,54 @@ async function performFunctions() {
       ? (showFiles = options.limit)
       : showFiles;
     showFiles = showFiles > files.length ? files.length : showFiles;
+    // Compression Level of image
+    const compressionLevel =
+      options.compress === "moderate"
+        ? 40
+        : options.compress === "high"
+        ? 10
+        : 70;
+    // Compressing Images
+    const Jimp = require("jimp");
+    for (var i = 0; i < showFiles; i++) {
+      let imgPath = files[i];
+      const image = await Jimp.read(imgPath);
+      await image.quality(compressionLevel);
+      await image.writeAsync("build/" + imgPath);
+    }
     // Loop through files
     for (var i = 0; i < showFiles; i++) {
       let file = files[i];
-      fileInfoArray.push(await generate_callback(file));
+      fileInfoArray.push(await getFileSize(file));
     }
+    files = getAllFiles("./build", []);
+
+    // Loop through files
+    for (var i = 0; i < showFiles; i++) {
+      let file = files[i];
+      compressedFiles.push(await getFileSize(file));
+    }
+
     // Show images based on order specified by command or ascending
     options.order === "desc"
       ? fileInfoArray.sort(GetSortOrderDesc("size"))
       : fileInfoArray.sort(GetSortOrderAsc("size"));
+
     // Displaying Images
-    fileInfoArray.forEach(element => {
-      console.log(element.file);
-      console.log(element.info);
+    console.log("       -------------");
+    fileInfoArray.forEach(elm => {
+      compressedFiles.forEach(cmprsElm => {
+        if (elm.file === "." + cmprsElm.file.substring(7, cmprsElm.length)) {
+          color =
+            cmprsElm.size >= 500
+              ? "red"
+              : cmprsElm.size <= 500 && cmprsElm.size >= 200
+              ? "yellow"
+              : "green";
+          showStats(color, cmprsElm.size, elm.size, cmprsElm.file);
+        }
+      });
+      console.log("       -------------");
     });
   } catch (error) {
     console.log("Something went wrong");
@@ -122,6 +147,38 @@ async function performFunctions() {
 }
 // Running the function to perform function
 performFunctions();
+
+// Show stats
+function showStats(color, cmprsSize, unCmprsSize, file) {
+  let fileExt = getExtention(file);
+  let percentage = Math.ceil((cmprsSize / unCmprsSize) * 100);
+
+  if (color === "red") {
+    console.log(chalk.red.bold(`[OPTIMIZED]  ${file}`));
+    console.log(
+      chalk.red.bold(
+        ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
+          percentage} %`
+      )
+    );
+  } else if (color === "yellow") {
+    console.log(chalk.yellow.bold(`[OPTIMIZED]  ${file}`));
+    console.log(
+      chalk.yellow.bold(
+        ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
+          percentage} %`
+      )
+    );
+  } else {
+    console.log(chalk.green.bold(`[OPTIMIZED]  ${file}`));
+    console.log(
+      chalk.green.bold(
+        ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
+          percentage} %`
+      )
+    );
+  }
+}
 // Function to get array in ascending order
 const GetSortOrderAsc = prop => {
   return (a, b) => {
@@ -148,38 +205,20 @@ const GetSortOrderDesc = prop => {
   };
 };
 
-//Getting the size of image
-async function generate_callback(file) {
-  // Getting file extention
+// Getting Extention of file
+function getExtention(file) {
   var fileExt = path.extname(file.toString());
   fileExt = fileExt.substring(1, fileExt.length);
   fileExt = fileExt.toUpperCase();
+  return fileExt;
+}
+
+//Getting the size of image
+async function getFileSize(file) {
   return new Promise((resolve, reject) => {
     fs.stat(file, function(err, stats) {
       let fileSize = Math.ceil(stats["size"] / 1000);
-      // getting color to display in cli
-      let color =
-        fileSize >= 500
-          ? "red"
-          : fileSize <= 500 && fileSize >= 200
-          ? "yellow"
-          : "green";
-      // Setting size color
-      let info =
-        color === "red"
-          ? chalk.red.bold(`        Size:  ${fileSize} KB`)
-          : color === "yellow"
-          ? chalk.yellow.bold(`        Size:  ${fileSize} KB`)
-          : chalk.green.bold(`        Size:  ${fileSize} KB`);
-      // Setting file name color
-      file =
-        color === "red"
-          ? chalk.red.bold(`[${fileExt}]  ${file}`)
-          : color === "yellow"
-          ? chalk.yellow.bold(`[${fileExt}]  ${file}`)
-          : chalk.green.bold(`[${fileExt}]  ${file}`);
-      // Retrun information about file
-      resolve({ size: fileSize, info: info, file: file });
+      resolve({ size: fileSize, file: file });
     });
   });
 }
