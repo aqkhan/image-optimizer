@@ -75,7 +75,7 @@ async function performFunctions() {
       const image = await Jimp.read(imgPath);
       await image.quality(10);
       await image.writeAsync("build/" + imgPath);
-    })
+    });
 
     // Setting Limit of images to show
     let showFiles = 25;
@@ -83,7 +83,7 @@ async function performFunctions() {
       ? (showFiles = files.length)
       : options.limit
       ? (showFiles = options.limit)
-      : showFiles
+      : showFiles;
     showFiles = showFiles > files.length ? files.length : showFiles;
     // Loop through files
     for (var i = 0; i < showFiles; i++) {
