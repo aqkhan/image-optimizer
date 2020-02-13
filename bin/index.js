@@ -39,6 +39,12 @@ const options = yargs
     describe: "Set compression level of image high | moderate | low",
     type: "string",
     demandOption: false
+  })
+  .usage("Usage: -w")
+  .option("w", {
+    alias: "analyze",
+    describe: "Analyze the images in the directory",
+    demandOption: false
   }).argv;
 
 options.compress = options.compress ? options.compress : "moderate";
@@ -91,34 +97,36 @@ async function performFunctions() {
       ? (showFiles = options.limit)
       : showFiles;
     showFiles = showFiles > files.length ? files.length : showFiles;
-    // Compression Level of image
-    const compressionLevel =
-      options.compress === "moderate"
-        ? 40
-        : options.compress === "high"
-        ? 10
-        : 70;
-    // Compressing Images
-    const Jimp = require("jimp");
-    for (var i = 0; i < showFiles; i++) {
-      let imgPath = files[i];
-      const image = await Jimp.read(imgPath);
-      await image.quality(compressionLevel);
-      await image.writeAsync("build/" + imgPath);
-    }
     // Loop through files
     for (var i = 0; i < showFiles; i++) {
       let file = files[i];
       fileInfoArray.push(await getFileSize(file));
     }
-    files = getAllFiles("./build", []);
+    if (!options.analyze) {
+      // Compression Level of image
+      const compressionLevel =
+        options.compress === "moderate"
+          ? 40
+          : options.compress === "high"
+          ? 10
+          : 70;
+      // Compressing Images
+      const Jimp = require("jimp");
+      for (var i = 0; i < showFiles; i++) {
+        let imgPath = files[i];
+        const image = await Jimp.read(imgPath);
+        await image.quality(compressionLevel);
+        await image.writeAsync("build/" + imgPath);
+      }
 
-    // Loop through files
-    for (var i = 0; i < showFiles; i++) {
-      let file = files[i];
-      compressedFiles.push(await getFileSize(file));
+      files = getAllFiles("./build", []);
+
+      // Loop through files
+      for (var i = 0; i < showFiles; i++) {
+        let file = files[i];
+        compressedFiles.push(await getFileSize(file));
+      }
     }
-
     // Show images based on order specified by command or ascending
     options.order === "desc"
       ? fileInfoArray.sort(GetSortOrderDesc("size"))
@@ -126,20 +134,33 @@ async function performFunctions() {
 
     // Displaying Images
     console.log("       -------------");
-    fileInfoArray.forEach(elm => {
-      compressedFiles.forEach(cmprsElm => {
-        if (elm.file === "." + cmprsElm.file.substring(7, cmprsElm.length)) {
-          color =
-            cmprsElm.size >= 500
-              ? "red"
-              : cmprsElm.size <= 500 && cmprsElm.size >= 200
-              ? "yellow"
-              : "green";
-          showStats(color, cmprsElm.size, elm.size, cmprsElm.file);
-        }
+    if (options.analyze) {
+      fileInfoArray.forEach(elm => {
+        color =
+          elm.size >= 500
+            ? "red"
+            : elm.size <= 500 && elm.size >= 200
+            ? "yellow"
+            : "green";
+        analyzeImages(color, elm.size, elm.file);
+        console.log("       -------------");
       });
-      console.log("       -------------");
-    });
+    } else {
+      fileInfoArray.forEach(elm => {
+        compressedFiles.forEach(cmprsElm => {
+          if (elm.file === "." + cmprsElm.file.substring(7, cmprsElm.length)) {
+            color =
+              cmprsElm.size >= 500
+                ? "red"
+                : cmprsElm.size <= 500 && cmprsElm.size >= 200
+                ? "yellow"
+                : "green";
+            showStats(color, cmprsElm.size, elm.size, cmprsElm.file);
+          }
+        });
+        console.log("       -------------");
+      });
+    }
   } catch (error) {
     console.log("Something went wrong");
     console.log(error);
@@ -177,6 +198,20 @@ function showStats(color, cmprsSize, unCmprsSize, file) {
           percentage} %`
       )
     );
+  }
+}
+
+function analyzeImages(color, size, file) {
+  let fileExt = getExtention(file);
+  if (color === "red") {
+    console.log(chalk.red.bold(`[IMAGE] ${file}`));
+    console.log(chalk.red.bold(`  ${fileExt}:  ${size} KB`));
+  } else if (color === "yellow") {
+    console.log(chalk.yellow.bold(`[IMAGE] ${file}`));
+    console.log(chalk.yellow.bold(`  ${fileExt}:  ${size} KB`));
+  } else {
+    console.log(chalk.green.bold(`[IMAGE] ${file}`));
+    console.log(chalk.green.bold(` ${fileExt}:  ${size} KB`));
   }
 }
 // Function to get array in ascending order
