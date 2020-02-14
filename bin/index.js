@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-var fs = require("fs");
+const fs = require("fs");
 const chalk = require("chalk");
-var path = require("path");
+const path = require("path");
+
+const ora = require('ora')
 
 var filePath = ".";
 
@@ -79,14 +81,40 @@ const getAllFiles = function(dirPath, arrayOfFiles) {
   return arrayOfFiles;
 };
 
+// const process = require("process")
+// const rdl = require("readline")
+// class LoadingBar {
+//     constructor(size) {
+//         this.size = size
+//         this.cursor = 0
+//         this.timer = null
+//     }
+// start() {
+//         process.stdout.write("\x1B[?25l")
+//         for (let i = 0; i < this.size; i++) {
+//             process.stdout.write("\u2591")
+//         }
+//         rdl.cursorTo(process.stdout, this.cursor, 0);
+//         this.timer = setInterval(() => {
+//             process.stdout.write("\u2588")
+//             this.cursor++;
+//             if (this.cursor >= this.size) {
+//                 clearTimeout(this.timer)
+//             }
+//         }, 100)
+//     }
+// }
+
 // Performing functions
 async function performFunctions() {
+  const spinner = ora().start()
   try {
     // Getting All files from directories
     files = getAllFiles(filePath, files);
     console.log("Total Files: ", files.length);
     if (files.length === 0) {
       console.log("No Image File found!");
+      spinner.stop()
       return;
     }
     // Setting Limit of images to show
@@ -102,6 +130,25 @@ async function performFunctions() {
       let file = files[i];
       fileInfoArray.push(await getFileSize(file));
     }
+
+    // Show images based on order specified by command or ascending
+    options.order === "desc"
+      ? fileInfoArray.sort(GetSortOrderDesc("size"))
+      : fileInfoArray.sort(GetSortOrderAsc("size"));
+
+    // Displaying Images
+    console.log("--------------------------");
+        fileInfoArray.forEach(elm => {
+          color =
+            elm.size >= 500
+              ? "red"
+              : elm.size <= 500 && elm.size >= 200
+              ? "yellow"
+              : "green";
+          analyzeImages(color, elm.size, elm.file);
+          console.log("--------------------------");
+        });
+
     if (!options.analyze) {
       // Compression Level of image
       const compressionLevel =
@@ -126,26 +173,8 @@ async function performFunctions() {
         let file = files[i];
         compressedFiles.push(await getFileSize(file));
       }
-    }
-    // Show images based on order specified by command or ascending
-    options.order === "desc"
-      ? fileInfoArray.sort(GetSortOrderDesc("size"))
-      : fileInfoArray.sort(GetSortOrderAsc("size"));
-
-    // Displaying Images
-    console.log("       -------------");
-    if (options.analyze) {
-      fileInfoArray.forEach(elm => {
-        color =
-          elm.size >= 500
-            ? "red"
-            : elm.size <= 500 && elm.size >= 200
-            ? "yellow"
-            : "green";
-        analyzeImages(color, elm.size, elm.file);
-        console.log("       -------------");
-      });
-    } else {
+      spinner.succeed('Optimization Completed')
+      console.log("--------------------------");
       fileInfoArray.forEach(elm => {
         compressedFiles.forEach(cmprsElm => {
           if (elm.file === "." + cmprsElm.file.substring(7, cmprsElm.length)) {
@@ -158,15 +187,18 @@ async function performFunctions() {
             showStats(color, cmprsElm.size, elm.size, cmprsElm.file);
           }
         });
-        console.log("       -------------");
-      });
+        console.log("--------------------------");
+      })
     }
+    spinner.stop()  
   } catch (error) {
+    spinner.fail('Something went wrong')
     console.log("Something went wrong");
     console.log(error);
   }
 }
 // Running the function to perform function
+
 performFunctions();
 
 // Show stats
@@ -175,7 +207,7 @@ function showStats(color, cmprsSize, unCmprsSize, file) {
   let percentage = Math.ceil((cmprsSize / unCmprsSize) * 100);
 
   if (color === "red") {
-    console.log(chalk.red.bold(`[OPTIMIZED]  ${file}`));
+    console.log(chalk.red.bold(`×  [OPTIMIZED]  ${file.toUpperCase()}`));
     console.log(
       chalk.red.bold(
         ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
@@ -183,7 +215,7 @@ function showStats(color, cmprsSize, unCmprsSize, file) {
       )
     );
   } else if (color === "yellow") {
-    console.log(chalk.yellow.bold(`[OPTIMIZED]  ${file}`));
+    console.log(chalk.yellow.bold(`‼ [OPTIMIZED]  ${file.toUpperCase()}`));
     console.log(
       chalk.yellow.bold(
         ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
@@ -191,7 +223,7 @@ function showStats(color, cmprsSize, unCmprsSize, file) {
       )
     );
   } else {
-    console.log(chalk.green.bold(`[OPTIMIZED]  ${file}`));
+    console.log(chalk.green.bold(`√ [OPTIMIZED]  ${file.toUpperCase()}`));
     console.log(
       chalk.green.bold(
         ` ${fileExt}:  ${unCmprsSize} KB -> ${fileExt}:  ${cmprsSize} KB   ${100 -
@@ -204,13 +236,13 @@ function showStats(color, cmprsSize, unCmprsSize, file) {
 function analyzeImages(color, size, file) {
   let fileExt = getExtention(file);
   if (color === "red") {
-    console.log(chalk.red.bold(`[IMAGE] ${file}`));
+    console.log(chalk.red.bold(`× [IMAGE] ${file.toUpperCase()}`));
     console.log(chalk.red.bold(`  ${fileExt}:  ${size} KB`));
   } else if (color === "yellow") {
-    console.log(chalk.yellow.bold(`[IMAGE] ${file}`));
+    console.log(chalk.yellow.bold(`‼ [IMAGE] ${file.toUpperCase()}`));
     console.log(chalk.yellow.bold(`  ${fileExt}:  ${size} KB`));
   } else {
-    console.log(chalk.green.bold(`[IMAGE] ${file}`));
+    console.log(chalk.green.bold(`√ [IMAGE] ${file.toUpperCase()}`));
     console.log(chalk.green.bold(` ${fileExt}:  ${size} KB`));
   }
 }
