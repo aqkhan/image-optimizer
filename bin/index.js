@@ -4,7 +4,7 @@ const fs = require("fs");
 const chalk = require("chalk");
 const path = require("path");
 
-const ora = require('ora')
+const ora = require("ora");
 
 var filePath = ".";
 
@@ -81,40 +81,16 @@ const getAllFiles = function(dirPath, arrayOfFiles) {
   return arrayOfFiles;
 };
 
-// const process = require("process")
-// const rdl = require("readline")
-// class LoadingBar {
-//     constructor(size) {
-//         this.size = size
-//         this.cursor = 0
-//         this.timer = null
-//     }
-// start() {
-//         process.stdout.write("\x1B[?25l")
-//         for (let i = 0; i < this.size; i++) {
-//             process.stdout.write("\u2591")
-//         }
-//         rdl.cursorTo(process.stdout, this.cursor, 0);
-//         this.timer = setInterval(() => {
-//             process.stdout.write("\u2588")
-//             this.cursor++;
-//             if (this.cursor >= this.size) {
-//                 clearTimeout(this.timer)
-//             }
-//         }, 100)
-//     }
-// }
-
 // Performing functions
 async function performFunctions() {
-  const spinner = ora().start()
+  const spinner = ora().start();
   try {
     // Getting All files from directories
     files = getAllFiles(filePath, files);
     console.log("Total Files: ", files.length);
     if (files.length === 0) {
       console.log("No Image File found!");
-      spinner.stop()
+      spinner.stop();
       return;
     }
     // Setting Limit of images to show
@@ -138,16 +114,16 @@ async function performFunctions() {
 
     // Displaying Images
     console.log("--------------------------");
-        fileInfoArray.forEach(elm => {
-          color =
-            elm.size >= 500
-              ? "red"
-              : elm.size <= 500 && elm.size >= 200
-              ? "yellow"
-              : "green";
-          analyzeImages(color, elm.size, elm.file);
-          console.log("--------------------------");
-        });
+    fileInfoArray.forEach(elm => {
+      color =
+        elm.size >= 500
+          ? "red"
+          : elm.size <= 500 && elm.size >= 200
+          ? "yellow"
+          : "green";
+      analyzeImages(color, elm.size, elm.file);
+      console.log("--------------------------");
+    });
 
     if (!options.analyze) {
       // Compression Level of image
@@ -161,9 +137,10 @@ async function performFunctions() {
       const Jimp = require("jimp");
       for (var i = 0; i < showFiles; i++) {
         let imgPath = files[i];
-        spinner.color = 'green'
-        spinner.text = "Optimizing: " + imgPath
-        const image = await Jimp.read(imgPath);""
+        spinner.color = "green";
+        spinner.text = "Optimizing: " + imgPath;
+        const image = await Jimp.read(imgPath);
+        ("");
         await image.quality(compressionLevel);
         await image.writeAsync("build/" + imgPath);
       }
@@ -175,7 +152,7 @@ async function performFunctions() {
         let file = files[i];
         compressedFiles.push(await getFileSize(file));
       }
-      spinner.succeed('Optimization Completed')
+      spinner.succeed("Optimization Completed");
       console.log("--------------------------");
       fileInfoArray.forEach(elm => {
         compressedFiles.forEach(cmprsElm => {
@@ -190,11 +167,11 @@ async function performFunctions() {
           }
         });
         console.log("--------------------------");
-      })
+      });
     }
-    spinner.stop()  
+    spinner.stop();
   } catch (error) {
-    spinner.fail('Something went wrong')
+    spinner.fail("Something went wrong");
     console.log("Something went wrong");
     console.log(error);
   }
