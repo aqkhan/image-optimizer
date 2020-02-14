@@ -161,7 +161,9 @@ async function performFunctions() {
       const Jimp = require("jimp");
       for (var i = 0; i < showFiles; i++) {
         let imgPath = files[i];
-        const image = await Jimp.read(imgPath);
+        spinner.color = 'green'
+        spinner.text = "Optimizing: " + imgPath
+        const image = await Jimp.read(imgPath);""
         await image.quality(compressionLevel);
         await image.writeAsync("build/" + imgPath);
       }
